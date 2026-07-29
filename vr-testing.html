@@ -129,7 +129,7 @@
     This does NOT fix bitrate/compression artifacts — that's a source-encode
     problem, not a renderer problem.
   -->
-  <a-videosphere id="videoSphere" src="#video360" rotation="0 -90 0"
+  <a-videosphere id="videoSphere" class="grabbable-scene" src="#video360" rotation="0 -90 0"
     segments-height="64" segments-width="128">
   </a-videosphere>
 
@@ -146,16 +146,18 @@
     </a-camera>
   </a-entity>
 
+  <!-- objects list includes .grabbable-scene (the video sphere itself) so the
+       laser can grab open video area, not just HUD elements -->
   <a-entity id="leftHand"
     laser-controls="hand: left"
-    raycaster="objects: .clickable, .drag-track; far: 20"
+    raycaster="objects: .clickable, .drag-track, .grabbable-scene; far: 30"
     line="color: #35e0ff; opacity: 0.9"
     drag-interaction>
   </a-entity>
 
   <a-entity id="rightHand"
     laser-controls="hand: right"
-    raycaster="objects: .clickable, .drag-track; far: 20"
+    raycaster="objects: .clickable, .drag-track, .grabbable-scene; far: 30"
     line="color: #ffb545; opacity: 0.9"
     drag-interaction>
   </a-entity>
@@ -434,11 +436,16 @@
     log('CLICK: resolution -> ' + rung.label + ' (' + source + ')');
   }
 
-  // ---- Continuous drag interaction (seek + volume) ----
+  // ---- Continuous drag interaction: HUD sliders (seek/volume) AND
+  // grab-and-pan on the video sphere itself (YouTube-style laser drag) ----
   AFRAME.registerComponent('drag-interaction', {
     init: function () {
       this.dragging = false;
       this.dragTarget = null;
+      this.grabbingScene = false;
+      this.lastRayDir = null;
+      this.rigObject3D = document.querySelector('#rig').object3D;
+
       this.onDown = this.onDown.bind(this);
       this.onUp = this.onUp.bind(this);
       this.onIntersection = this.onIntersection.bind(this);
@@ -449,20 +456,29 @@
       this.el.addEventListener('raycaster-intersection', this.onIntersection);
     },
     onDown: function () {
-      var raycaster = this.el.components.raycaster;
-      if (!raycaster || !raycaster.intersections.length) return;
-      var targetEl = raycaster.intersections[0].object.el;
+      var raycasterComp = this.el.components.raycaster;
+      if (!raycasterComp || !raycasterComp.intersections.length) return;
+      var targetEl = raycasterComp.intersections[0].object.el;
+
       if (targetEl && targetEl.classList.contains('drag-track')) {
         this.dragging = true;
         this.dragTarget = targetEl;
         log('DRAG start: ' + targetEl.id);
-        this.applyFromIntersection(raycaster.intersections[0]);
+        this.applyFromIntersection(raycasterComp.intersections[0]);
+      } else if (targetEl && targetEl.classList.contains('grabbable-scene')) {
+        // Grabbing open video area, not a HUD control — start scene pan.
+        this.grabbingScene = true;
+        this.lastRayDir = raycasterComp.raycaster.ray.direction.clone().normalize();
+        log('GRAB start: scene pan');
       }
     },
     onUp: function () {
       if (this.dragging && this.dragTarget) log('DRAG end: ' + this.dragTarget.id);
+      if (this.grabbingScene) log('GRAB end: scene pan');
       this.dragging = false;
       this.dragTarget = null;
+      this.grabbingScene = false;
+      this.lastRayDir = null;
     },
     onIntersection: function (evt) {
       if (!this.dragging || !this.dragTarget) return;
@@ -471,6 +487,21 @@
       }.bind(this))[0];
       if (!match) return;
       this.applyFromIntersection(match);
+    },
+    tick: function () {
+      // Runs every frame while a trigger-grab on the video sphere is held.
+      // Rotates the rig (not the camera — camera stays under real headset
+      // head-tracking) so the point you grabbed stays "stuck" to your
+      // controller as you move it, same feel as grabbing a globe.
+      if (!this.grabbingScene) return;
+      var raycasterComp = this.el.components.raycaster;
+      if (!raycasterComp) return;
+      var currDir = raycasterComp.raycaster.ray.direction.clone().normalize();
+      if (this.lastRayDir) {
+        var deltaQuat = new THREE.Quaternion().setFromUnitVectors(currDir, this.lastRayDir);
+        this.rigObject3D.quaternion.premultiply(deltaQuat);
+      }
+      this.lastRayDir = currDir;
     },
     applyFromIntersection: function (intersection) {
       var trackEl = this.dragTarget;
