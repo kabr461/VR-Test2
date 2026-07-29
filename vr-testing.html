@@ -60,6 +60,31 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 
   .clickable, .drag-track { cursor: pointer; }
+
+  #desktopControls {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 20px; box-sizing: border-box;
+    background: linear-gradient(0deg, rgba(5,7,10,0.95) 0%, rgba(5,7,10,0) 100%);
+    font-family: 'Inter', sans-serif;
+  }
+  #desktopControls.hidden { display: none; }
+  #desktopControls button {
+    background: #151c26; border: 1px solid #1c2530; color: var(--text);
+    border-radius: 6px; padding: 8px 14px; font-size: 13px; cursor: pointer;
+    font-family: 'Inter', sans-serif; flex-shrink: 0;
+  }
+  #desktopControls button:hover { background: #1c2530; border-color: var(--cyan); }
+  #desktopControls input[type="range"] {
+    flex: 1; accent-color: var(--cyan); cursor: pointer;
+  }
+  #desktopControls .volWrap input[type="range"] { width: 90px; flex: none; }
+  #desktopControls select {
+    background: #151c26; border: 1px solid #1c2530; color: var(--text);
+    border-radius: 6px; padding: 8px 10px; font-size: 12px; cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace; flex-shrink: 0;
+  }
+  #desktopControls label { color: var(--text-dim); font-size: 11px; font-family: 'IBM Plex Mono', monospace; flex-shrink: 0; }
 </style>
 </head>
 <body>
@@ -75,6 +100,17 @@
     </div>
   </div>
   <button id="launchBtn">Enter VR</button>
+</div>
+
+<div id="desktopControls">
+  <button id="dtPlayPause">Play</button>
+  <input id="dtSeek" type="range" min="0" max="1000" value="0">
+  <div class="volWrap">
+    <label>VOL</label>
+    <input id="dtVolume" type="range" min="0" max="100" value="100">
+  </div>
+  <label>RES</label>
+  <select id="dtQuality"></select>
 </div>
 
 <a-scene xr-mode-ui="enabled: true" vr-mode-ui="enabled: true" background="color: #05070a">
@@ -243,7 +279,8 @@
 
   // ---- HUD show/hide, controlled only by the grip button, never by a timer ----
   var hud = document.querySelector('#hud');
-  var hudVisible = true;
+  var hudVisible = false;
+  hud.setAttribute('visible', false);
   function toggleHud() {
     hudVisible = !hudVisible;
     hud.setAttribute('visible', hudVisible);
@@ -252,17 +289,47 @@
   document.querySelector('#leftHand').addEventListener('gripdown', toggleHud);
   document.querySelector('#rightHand').addEventListener('gripdown', toggleHud);
 
-  // ---- Play / Pause ----
-  document.querySelector('#playPauseBtn').addEventListener('click', function () {
-    if (video.paused) { video.play(); log('CLICK: Play'); }
-    else { video.pause(); log('CLICK: Pause'); }
-  });
+  // Desktop control bar only makes sense outside an immersive session —
+  // hide it the moment VR starts, bring it back when VR ends.
+  var desktopControls = document.querySelector('#desktopControls');
+  sceneEl.addEventListener('enter-vr', function () { desktopControls.classList.add('hidden'); });
+  sceneEl.addEventListener('exit-vr', function () { desktopControls.classList.remove('hidden'); });
 
-  // ---- Mute ----
-  document.querySelector('#muteBtn').addEventListener('click', function () {
+  // ---- Play / Pause (shared: 3D button + desktop button + video events) ----
+  var dtPlayPause = document.querySelector('#dtPlayPause');
+  function togglePlay(source) {
+    if (video.paused) { video.play(); log('CLICK: Play (' + source + ')'); }
+    else { video.pause(); log('CLICK: Pause (' + source + ')'); }
+  }
+  document.querySelector('#playPauseBtn').addEventListener('click', function () { togglePlay('3D'); });
+  dtPlayPause.addEventListener('click', function () { togglePlay('desktop'); });
+  video.addEventListener('play', function () { dtPlayPause.textContent = 'Pause'; });
+  video.addEventListener('pause', function () { dtPlayPause.textContent = 'Play'; });
+
+  // ---- Mute (shared) ----
+  var dtVolume = document.querySelector('#dtVolume');
+  function toggleMute(source) {
     video.muted = !video.muted;
     muteLabel.setAttribute('value', video.muted ? 'UNMUTE' : 'MUTE');
-    log('CLICK: ' + (video.muted ? 'Muted' : 'Unmuted'));
+    log('CLICK: ' + (video.muted ? 'Muted' : 'Unmuted') + ' (' + source + ')');
+  }
+  document.querySelector('#muteBtn').addEventListener('click', function () { toggleMute('3D'); });
+
+  // ---- Desktop seek + volume ----
+  var dtSeek = document.querySelector('#dtSeek');
+  var seekingFromUI = false;
+  dtSeek.addEventListener('input', function () {
+    seekingFromUI = true;
+    if (video.duration) video.currentTime = (dtSeek.value / 1000) * video.duration;
+  });
+  video.addEventListener('timeupdate', function () {
+    if (!seekingFromUI && video.duration) dtSeek.value = (video.currentTime / video.duration) * 1000;
+    seekingFromUI = false;
+  });
+  dtVolume.addEventListener('input', function () {
+    video.volume = dtVolume.value / 100;
+    if (video.volume > 0 && video.muted) { video.muted = false; muteLabel.setAttribute('value', 'MUTE'); }
+    log('Desktop volume -> ' + dtVolume.value + '%');
   });
 
   // ---- Hover feedback on all clickable buttons ----
@@ -271,13 +338,20 @@
     el.addEventListener('mouseleave', function () { el.setAttribute('material', 'color', baseColor); });
   }
 
-  // ---- Build resolution menu from QUALITY_LADDER ----
+  // ---- Build resolution menu from QUALITY_LADDER: both 3D buttons and the
+  // desktop <select>, driven off the same array and same switchQuality() ----
   var qualityMenu = document.querySelector('#qualityMenu');
+  var dtQuality = document.querySelector('#dtQuality');
   var btnWidth = 0.6, gap = 0.04;
   var totalWidth = QUALITY_LADDER.length * btnWidth + (QUALITY_LADDER.length - 1) * gap;
   var startX = -totalWidth / 2 + btnWidth / 2;
 
   QUALITY_LADDER.forEach(function (rung, i) {
+    var opt = document.createElement('option');
+    opt.value = rung.id;
+    opt.textContent = rung.label;
+    dtQuality.appendChild(opt);
+
     var btn = document.createElement('a-entity');
     btn.classList.add('clickable', 'quality-btn');
     btn.dataset.qualityId = rung.id;
@@ -304,14 +378,19 @@
     btn.appendChild(label);
 
     btn.addEventListener('click', function () {
-      switchQuality(rung);
+      switchQuality(rung, '3D');
     });
     wireHover(btn, '#151c26');
 
     qualityMenu.appendChild(btn);
   });
 
-  function switchQuality(rung) {
+  dtQuality.addEventListener('change', function () {
+    var rung = QUALITY_LADDER.filter(function (r) { return r.id === dtQuality.value; })[0];
+    if (rung) switchQuality(rung, 'desktop');
+  });
+
+  function switchQuality(rung, source) {
     var wasPlaying = !video.paused;
     var t = video.currentTime;
     video.src = rung.src;
@@ -322,12 +401,13 @@
       video.removeEventListener('loadedmetadata', onLoaded);
     });
     activeQuality = rung.id;
+    dtQuality.value = rung.id;
     document.querySelectorAll('.quality-btn').forEach(function (b) {
       var on = b.dataset.qualityId === rung.id;
       b.querySelector('a-text').setAttribute('color', on ? '#35e0ff' : '#e8edf2');
       b.querySelector('.quality-underline').setAttribute('color', on ? '#35e0ff' : '#2a3542');
     });
-    log('CLICK: resolution -> ' + rung.label);
+    log('CLICK: resolution -> ' + rung.label + ' (' + source + ')');
   }
 
   // ---- Continuous drag interaction (seek + volume) ----
