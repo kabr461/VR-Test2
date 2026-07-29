@@ -113,7 +113,7 @@
   <select id="dtQuality"></select>
 </div>
 
-<a-scene xr-mode-ui="enabled: true" vr-mode-ui="enabled: true" background="color: #05070a">
+<a-scene xr-mode-ui="enabled: false" vr-mode-ui="enabled: false" background="color: #05070a">
 
   <a-assets timeout="10000">
     <video id="video360"
@@ -264,16 +264,40 @@
     log('Scene loaded.');
   });
 
-  // ---- Launch VR ----
-  document.querySelector('#launchBtn').addEventListener('click', function () {
+  // ---- Launch VR: only enabled if this device/browser genuinely supports
+  // a real immersive-vr WebXR session (Quest browser, or a PC with the
+  // headset paired via Link/Air Link). Plain desktop Chrome with no XR
+  // runtime attached does NOT get this button — it just gets the normal
+  // 2D controls, no fake tilted 3D fallback view.
+  var launchBtn = document.querySelector('#launchBtn');
+  launchBtn.disabled = true;
+  launchBtn.textContent = 'Checking device…';
+
+  function checkXrSupport() {
+    if (!navigator.xr || !navigator.xr.isSessionSupported) return Promise.resolve(false);
+    return navigator.xr.isSessionSupported('immersive-vr').catch(function () { return false; });
+  }
+
+  checkXrSupport().then(function (supported) {
+    if (supported) {
+      launchBtn.disabled = false;
+      launchBtn.textContent = 'Enter VR';
+      log('immersive-vr supported. Enter VR enabled.');
+    } else {
+      launchBtn.style.display = 'none';
+      log('No immersive-vr device detected — desktop controls only.');
+    }
+  });
+
+  launchBtn.addEventListener('click', function () {
     if (sceneEl.is('vr-mode')) sceneEl.exitVR(); else sceneEl.enterVR();
   });
   sceneEl.addEventListener('enter-vr', function () {
-    document.querySelector('#launchBtn').textContent = 'Exit VR';
+    launchBtn.textContent = 'Exit VR';
     log('Entered immersive VR session.');
   });
   sceneEl.addEventListener('exit-vr', function () {
-    document.querySelector('#launchBtn').textContent = 'Enter VR';
+    launchBtn.textContent = 'Enter VR';
     log('Exited immersive VR session.');
   });
 
