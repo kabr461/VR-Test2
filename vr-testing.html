@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>VR Testing — WebXR Laser + Click Sandbox</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://cdn.jsdelivr.net/npm/aframe@1.5.0/dist/aframe-master.min.js"></script>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #0a0a0f; font-family: -apple-system, Segoe UI, Roboto, sans-serif; }
+  #overlay {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 20px; box-sizing: border-box;
+    background: linear-gradient(180deg, rgba(10,10,15,0.85), rgba(10,10,15,0));
+    pointer-events: none;
+  }
+  #overlay h1 { color: #eaeaf0; font-size: 15px; font-weight: 600; margin: 0; letter-spacing: 0.02em; pointer-events: auto; }
+  #overlay p { color: #8b8b9a; font-size: 12px; margin: 2px 0 0; pointer-events: auto; }
+  #launchBtn {
+    pointer-events: auto;
+    background: #4dd0e1; color: #06171a; border: none; border-radius: 8px;
+    padding: 12px 22px; font-size: 14px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 2px 12px rgba(77,208,225,0.35);
+  }
+  #launchBtn:hover { background: #6fe0ee; }
+  #launchBtn:disabled { opacity: 0.5; cursor: default; }
+  .clickable, .drag-track { cursor: pointer; }
+  a-scene { width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+
+<div id="overlay">
+  <div>
+    <h1>VR TESTING SANDBOX</h1>
+    <p>Desktop: drag mouse to look, click to test. Quest: hit Enter VR, use trigger + laser.</p>
+  </div>
+  <button id="launchBtn">Enter VR</button>
+</div>
+
+<a-scene xr-mode-ui="enabled: true" vr-mode-ui="enabled: true">
+
+  <a-assets timeout="8000">
+    <video id="video360"
+      src="https://cdn.aframe.io/360-video-boilerplate/video/city.mp4"
+      crossorigin="anonymous" loop playsinline webkit-playsinline
+      data-quality="A"
+      data-src-a="https://cdn.aframe.io/360-video-boilerplate/video/city.mp4"
+      data-src-b="https://cdn.bitmovin.com/content/assets/playhouse-vr/progressive.mp4">
+    </video>
+  </a-assets>
+
+  <a-videosphere id="videoSphere" src="#video360" rotation="0 -90 0"></a-videosphere>
+
+  <!-- Camera + mouse/gaze raycaster fallback for desktop testing -->
+  <a-entity id="rig" position="0 1.6 0">
+    <a-camera id="camera" look-controls wasd-controls>
+      <a-cursor
+        id="mouseCursor"
+        drag-interaction
+        raycaster="objects: .clickable, .drag-track; far: 20"
+        cursor="rayOrigin: mouse; fuse: false"
+        geometry="primitive: ring; radiusInner: 0.008; radiusOuter: 0.012"
+        material="color: #4dd0e1; shader: flat">
+      </a-cursor>
+    </a-camera>
+  </a-entity>
+
+  <!-- Quest 3 controllers: laser-controls bundles raycaster + line + cursor(triggerdown/up) -->
+  <a-entity id="leftHand"
+    laser-controls="hand: left"
+    raycaster="objects: .clickable, .drag-track; far: 20"
+    line="color: #4dd0e1; opacity: 0.85"
+    drag-interaction>
+  </a-entity>
+
+  <a-entity id="rightHand"
+    laser-controls="hand: right"
+    raycaster="objects: .clickable, .drag-track; far: 20"
+    line="color: #ffca4d; opacity: 0.85"
+    drag-interaction>
+  </a-entity>
+
+  <!-- HUD panel, fixed in world space in front of spawn point -->
+  <a-entity id="hud" position="0 1.5 -2.2">
+
+    <a-plane class="panel-bg" width="1.9" height="1.5" color="#0d0d14" opacity="0.88" material="shader: flat"></a-plane>
+
+    <a-text value="VR TEST PANEL" position="-0.85 0.66 0.01" width="2.4" color="#4dd0e1" align="left"></a-text>
+
+    <!-- Play / Pause -->
+    <a-entity id="playPauseBtn" class="clickable"
+      geometry="primitive: plane; width: 0.5; height: 0.14"
+      material="color: #22222e; shader: flat"
+      position="-0.6 0.42 0.01">
+      <a-text value="PLAY / PAUSE" align="center" position="0 0 0.01" width="1.6" color="#eaeaf0"></a-text>
+    </a-entity>
+
+    <!-- Quality buttons -->
+    <a-entity id="qualityAutoBtn" class="clickable quality-btn" data-quality="A"
+      geometry="primitive: plane; width: 0.5; height: 0.14"
+      material="color: #22222e; shader: flat"
+      position="0.28 0.42 0.01">
+      <a-text value="STREAM A" align="center" position="0 0 0.01" width="1.6" color="#eaeaf0"></a-text>
+    </a-entity>
+
+    <a-entity id="qualityBBtn" class="clickable quality-btn" data-quality="B"
+      geometry="primitive: plane; width: 0.5; height: 0.14"
+      material="color: #22222e; shader: flat"
+      position="0.28 0.24 0.01">
+      <a-text value="STREAM B" align="center" position="0 0 0.01" width="1.6" color="#eaeaf0"></a-text>
+    </a-entity>
+
+    <a-text id="qualityLabel" value="active: STREAM A" position="-0.85 0.24 0.01" width="1.6" color="#8b8b9a"></a-text>
+
+    <!-- Seek bar: continuous drag target -->
+    <a-text value="SEEK (hold trigger + drag along bar)" position="-0.85 0.06 0.01" width="1.4" color="#8b8b9a"></a-text>
+    <a-entity id="seekTrack" class="drag-track" data-type="seek" data-width="1.6"
+      geometry="primitive: plane; width: 1.6; height: 0.06"
+      material="color: #22222e; shader: flat"
+      position="0 -0.04 0.01">
+      <a-entity id="seekHandle" class="handle"
+        geometry="primitive: circle; radius: 0.045; segments: 24"
+        material="color: #4dd0e1; shader: flat"
+        position="-0.8 0 0.01">
+      </a-entity>
+    </a-entity>
+
+    <!-- Volume slider: continuous drag target -->
+    <a-text value="VOLUME (hold trigger + drag along bar)" position="-0.85 -0.2 0.01" width="1.4" color="#8b8b9a"></a-text>
+    <a-entity id="volumeTrack" class="drag-track" data-type="volume" data-width="1.6"
+      geometry="primitive: plane; width: 1.6; height: 0.06"
+      material="color: #22222e; shader: flat"
+      position="0 -0.3 0.01">
+      <a-entity id="volumeHandle" class="handle"
+        geometry="primitive: circle; radius: 0.045; segments: 24"
+        material="color: #ffca4d; shader: flat"
+        position="0.8 0 0.01">
+      </a-entity>
+    </a-entity>
+
+    <!-- Debug log so you can verify click/drag detection while inside the headset -->
+    <a-plane width="1.9" height="0.44" color="#050508" position="0 -0.62 0.005" material="shader: flat"></a-plane>
+    <a-text id="debugLog" value="debug log ready..." position="-0.85 -0.46 0.02" width="1.5" color="#5ff08a" line-height="34" baseline="top"></a-text>
+
+  </a-entity>
+
+</a-scene>
+
+<script>
+(function () {
+  var video = document.querySelector('#video360');
+  var debugEl = document.querySelector('#debugLog');
+  var qualityLabel = document.querySelector('#qualityLabel');
+  var logLines = [];
+
+  function log(msg) {
+    var stamp = new Date().toLocaleTimeString();
+    logLines.push('[' + stamp + '] ' + msg);
+    if (logLines.length > 6) logLines.shift();
+    if (debugEl) debugEl.setAttribute('value', logLines.join('\n'));
+    console.log('[VR TEST]', msg);
+  }
+
+  // ---- Launch VR button ----
+  document.querySelector('#launchBtn').addEventListener('click', function () {
+    var sceneEl = document.querySelector('a-scene');
+    if (sceneEl.is('vr-mode')) {
+      sceneEl.exitVR();
+    } else {
+      sceneEl.enterVR();
+    }
+  });
+
+  var sceneEl = document.querySelector('a-scene');
+  sceneEl.addEventListener('enter-vr', function () {
+    document.querySelector('#launchBtn').textContent = 'Exit VR';
+    log('Entered immersive VR session');
+  });
+  sceneEl.addEventListener('exit-vr', function () {
+    document.querySelector('#launchBtn').textContent = 'Enter VR';
+    log('Exited immersive VR session');
+  });
+
+  // ---- Play / Pause ----
+  document.querySelector('#playPauseBtn').addEventListener('click', function () {
+    if (video.paused) {
+      video.play();
+      log('CLICK detected: Play');
+    } else {
+      video.pause();
+      log('CLICK detected: Pause');
+    }
+  });
+
+  // Hover feedback so the laser gives visual confirmation before you commit a click,
+  // same affordance native VR UIs (incl. YouTube) give you.
+  document.querySelectorAll('.clickable').forEach(function (el) {
+    var baseColor = el.getAttribute('material').color;
+    el.addEventListener('mouseenter', function () {
+      el.setAttribute('material', 'color', '#3a3a4a');
+    });
+    el.addEventListener('mouseleave', function () {
+      el.setAttribute('material', 'color', baseColor);
+    });
+  });
+
+  // ---- Quality / resolution swap ----
+  // NOTE: real deployment should point data-src-a / data-src-b at actual bitrate
+  // variants of the SAME content. Two different sample clips are used here purely
+  // to prove the swap mechanism (src change + currentTime/play-state preservation)
+  // fires correctly off a laser click.
+  document.querySelectorAll('.quality-btn').forEach(function (el) {
+    el.addEventListener('click', function () {
+      var quality = el.dataset.quality;
+      var wasPlaying = !video.paused;
+      var t = video.currentTime;
+      var newSrc = quality === 'A' ? video.dataset.srcA : video.dataset.srcB;
+
+      video.src = newSrc;
+      video.load();
+      video.addEventListener('loadedmetadata', function onLoaded() {
+        video.currentTime = Math.min(t, video.duration || t);
+        if (wasPlaying) video.play();
+        video.removeEventListener('loadedmetadata', onLoaded);
+      });
+
+      qualityLabel.setAttribute('value', 'active: STREAM ' + quality);
+      log('CLICK detected: switched to Stream ' + quality);
+    });
+  });
+
+  // ---- Continuous drag interaction (seek + volume) ----
+  // This is the mechanism YouTube VR's UI uses: hold trigger on a track, then track
+  // the raycaster's live intersection point every frame instead of firing one
+  // discrete click. Wired to both hand controllers AND the mouse cursor so you can
+  // test the whole thing on desktop before ever putting the headset on.
+  AFRAME.registerComponent('drag-interaction', {
+    init: function () {
+      this.dragging = false;
+      this.dragTarget = null;
+
+      this.onDown = this.onDown.bind(this);
+      this.onUp = this.onUp.bind(this);
+      this.onIntersection = this.onIntersection.bind(this);
+
+      this.el.addEventListener('triggerdown', this.onDown);
+      this.el.addEventListener('mousedown', this.onDown);
+      this.el.addEventListener('triggerup', this.onUp);
+      this.el.addEventListener('mouseup', this.onUp);
+      this.el.addEventListener('raycaster-intersection', this.onIntersection);
+    },
+
+    onDown: function () {
+      var raycaster = this.el.components.raycaster;
+      if (!raycaster || !raycaster.intersections.length) return;
+      var targetEl = raycaster.intersections[0].object.el;
+      if (targetEl && targetEl.classList.contains('drag-track')) {
+        this.dragging = true;
+        this.dragTarget = targetEl;
+        log('DRAG start: ' + targetEl.id);
+        this.applyFromIntersection(raycaster.intersections[0]);
+      }
+    },
+
+    onUp: function () {
+      if (this.dragging && this.dragTarget) {
+        log('DRAG end: ' + this.dragTarget.id);
+      }
+      this.dragging = false;
+      this.dragTarget = null;
+    },
+
+    onIntersection: function (evt) {
+      if (!this.dragging || !this.dragTarget) return;
+      var match = evt.detail.intersections.filter(function (i) {
+        return i.object.el === this.dragTarget;
+      }.bind(this))[0];
+      if (!match) return;
+      this.applyFromIntersection(match);
+    },
+
+    applyFromIntersection: function (intersection) {
+      var trackEl = this.dragTarget;
+      var width = parseFloat(trackEl.getAttribute('data-width')) || 1.6;
+      var localPoint = trackEl.object3D.worldToLocal(intersection.point.clone());
+      var t = (localPoint.x + width / 2) / width;
+      t = Math.min(1, Math.max(0, t));
+
+      var handle = trackEl.querySelector('.handle');
+      if (handle) handle.setAttribute('position', { x: -width / 2 + t * width, y: 0, z: 0.01 });
+
+      if (trackEl.dataset.type === 'seek') {
+        if (video.duration) video.currentTime = t * video.duration;
+      } else if (trackEl.dataset.type === 'volume') {
+        video.volume = t;
+      }
+    }
+  });
+
+  log('Scene ready. Click PLAY, drag SEEK/VOLUME, or switch STREAM A/B to test.');
+})();
+</script>
+
+</body>
+</html>
