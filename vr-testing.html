@@ -130,7 +130,7 @@
     problem, not a renderer problem.
   -->
   <a-videosphere id="videoSphere" class="grabbable-scene" src="#video360" rotation="0 -90 0"
-    segments-height="64" segments-width="128">
+    radius="100" segments-height="64" segments-width="128">
   </a-videosphere>
 
   <a-entity id="rig" position="0 1.6 0">
@@ -150,14 +150,14 @@
        laser can grab open video area, not just HUD elements -->
   <a-entity id="leftHand"
     laser-controls="hand: left"
-    raycaster="objects: .clickable, .drag-track, .grabbable-scene; far: 30"
+    raycaster="objects: .clickable, .drag-track, .grabbable-scene; far: 150"
     line="color: #35e0ff; opacity: 0.9"
     drag-interaction>
   </a-entity>
 
   <a-entity id="rightHand"
     laser-controls="hand: right"
-    raycaster="objects: .clickable, .drag-track, .grabbable-scene; far: 30"
+    raycaster="objects: .clickable, .drag-track, .grabbable-scene; far: 150"
     line="color: #ffb545; opacity: 0.9"
     drag-interaction>
   </a-entity>
@@ -167,18 +167,18 @@
     by default and only toggles on an explicit grip-button press (see
     toggleHud() below) — never disappears on its own while you're testing.
   -->
-  <a-entity id="hud" position="0 1.5 -2.3">
+  <a-entity id="hud" position="0 1.7 -2.5">
 
-    <a-plane class="panel-bg" width="2.1" height="1.72" color="#0c1016" opacity="0.94" material="shader: flat"></a-plane>
-    <a-plane width="2.1" height="0.005" color="#35e0ff" opacity="0.6" position="0 0.858 0.001" material="shader: flat"></a-plane>
+    <a-plane class="panel-bg" width="2.1" height="2.5" color="#0c1016" opacity="0.94" material="shader: flat"></a-plane>
+    <a-plane width="2.1" height="0.005" color="#35e0ff" opacity="0.6" position="0 1.238 0.001" material="shader: flat"></a-plane>
 
-    <a-text value="VR TEST RIG // CONTROL PANEL" position="-0.94 0.76 0.01" width="2.6" color="#35e0ff" align="left" font="sourcecodepro"></a-text>
+    <a-text value="VR TEST RIG // CONTROL PANEL" position="-0.94 1.14 0.01" width="2.6" color="#35e0ff" align="left" font="sourcecodepro"></a-text>
 
     <!-- Play / Pause -->
     <a-entity id="playPauseBtn" class="clickable"
       geometry="primitive: plane; width: 0.55; height: 0.15"
       material="color: #151c26; shader: flat"
-      position="-0.66 0.56 0.01">
+      position="-0.66 0.94 0.01">
       <a-plane width="0.55" height="0.008" color="#35e0ff" position="0 -0.075 0.001" material="shader: flat"></a-plane>
       <a-text value="PLAY / PAUSE" align="center" position="0 0 0.01" width="1.7" color="#e8edf2"></a-text>
     </a-entity>
@@ -186,23 +186,23 @@
     <a-entity id="muteBtn" class="clickable"
       geometry="primitive: plane; width: 0.55; height: 0.15"
       material="color: #151c26; shader: flat"
-      position="0.02 0.56 0.01">
+      position="0.02 0.94 0.01">
       <a-plane width="0.55" height="0.008" color="#ffb545" position="0 -0.075 0.001" material="shader: flat"></a-plane>
       <a-text id="muteLabel" value="MUTE" align="center" position="0 0 0.01" width="1.7" color="#e8edf2"></a-text>
     </a-entity>
 
-    <a-text value="RESOLUTION" position="-0.94 0.4 0.01" width="1.6" color="#6b7684" font="sourcecodepro"></a-text>
+    <a-text value="RESOLUTION" position="-0.94 0.78 0.01" width="1.6" color="#6b7684" font="sourcecodepro"></a-text>
 
     <!-- Resolution menu: proper list, not a 2-way toggle. Swap the src map in
          the script below for your real bitrate ladder — the wiring/UI stays
          identical no matter how many rungs the ladder has. -->
-    <a-entity id="qualityMenu" position="0 0.28 0.01"></a-entity>
+    <a-entity id="qualityMenu" position="0 0.66 0.01"></a-entity>
 
-    <a-text value="SEEK" position="-0.94 -0.02 0.01" width="1.6" color="#6b7684" font="sourcecodepro"></a-text>
+    <a-text value="SEEK" position="-0.94 0.36 0.01" width="1.6" color="#6b7684" font="sourcecodepro"></a-text>
     <a-entity id="seekTrack" class="drag-track" data-type="seek" data-width="1.88"
       geometry="primitive: plane; width: 1.88; height: 0.05"
       material="color: #151c26; shader: flat"
-      position="0 -0.1 0.01">
+      position="0 0.28 0.01">
       <a-plane id="seekFill" width="0.01" height="0.05" color="#35e0ff" position="-0.94 0 0.005" material="shader: flat"></a-plane>
       <a-entity id="seekHandle" class="handle"
         geometry="primitive: circle; radius: 0.042; segments: 20"
@@ -211,11 +211,11 @@
       </a-entity>
     </a-entity>
 
-    <a-text value="VOLUME" position="-0.94 -0.28 0.01" width="1.6" color="#6b7684" font="sourcecodepro"></a-text>
+    <a-text value="VOLUME" position="-0.94 0.02 0.01" width="1.6" color="#6b7684" font="sourcecodepro"></a-text>
     <a-entity id="volumeTrack" class="drag-track" data-type="volume" data-width="1.88"
       geometry="primitive: plane; width: 1.88; height: 0.05"
       material="color: #151c26; shader: flat"
-      position="0 -0.36 0.01">
+      position="0 -0.06 0.01">
       <a-plane id="volumeFill" width="0.01" height="0.05" color="#ffb545" position="-0.94 0 0.005" material="shader: flat"></a-plane>
       <a-entity id="volumeHandle" class="handle"
         geometry="primitive: circle; radius: 0.042; segments: 20"
@@ -224,10 +224,12 @@
       </a-entity>
     </a-entity>
 
-    <!-- Debug log -->
-    <a-plane width="2.1" height="0.5" color="#05070a" position="0 -0.6 0.005" material="shader: flat"></a-plane>
-    <a-plane width="2.1" height="0.005" color="#1c2530" position="0 -0.358 0.006" material="shader: flat"></a-plane>
-    <a-text id="debugLog" value="rig ready." position="-0.94 -0.42 0.02" width="1.55" color="#4ade80" line-height="32" baseline="top" font="sourcecodepro"></a-text>
+    <!-- Debug log: this is now the primary diagnostic surface, sized to
+         hold ~12 lines of live event trace -->
+    <a-text value="LIVE EVENT LOG" position="-0.94 -0.16 0.01" width="1.6" color="#6b7684" font="sourcecodepro"></a-text>
+    <a-plane width="2.1" height="1.15" color="#05070a" position="0 -0.63 0.005" material="shader: flat"></a-plane>
+    <a-plane width="2.1" height="0.005" color="#1c2530" position="0 -0.04 0.006" material="shader: flat"></a-plane>
+    <a-text id="debugLog" value="rig ready." position="-0.94 -0.1 0.02" width="1.35" color="#4ade80" line-height="26" baseline="top" font="sourcecodepro"></a-text>
 
   </a-entity>
 
@@ -239,6 +241,23 @@
   var debugEl = document.querySelector('#debugLog');
   var muteLabel = document.querySelector('#muteLabel');
   var logLines = [];
+
+  // ---- Video element diagnostics — catches silent failures (bad URL, CORS
+  // block, codec issue, stalled network) that would otherwise look
+  // identical to "nothing is happening" ----
+  video.addEventListener('loadedmetadata', function () {
+    log('VIDEO: metadata loaded, duration ' + (video.duration ? video.duration.toFixed(1) + 's' : 'unknown'));
+  });
+  video.addEventListener('canplay', function () { log('VIDEO: canplay (buffered enough to start)'); });
+  video.addEventListener('playing', function () { log('VIDEO: playing'); });
+  video.addEventListener('waiting', function () { log('VIDEO: waiting/buffering...'); });
+  video.addEventListener('stalled', function () { log('VIDEO: WARNING stalled (network not delivering data)'); });
+  video.addEventListener('error', function () {
+    var err = video.error;
+    var codes = { 1: 'ABORTED', 2: 'NETWORK', 3: 'DECODE', 4: 'SRC_NOT_SUPPORTED' };
+    log('VIDEO: ERROR ' + (err ? (codes[err.code] || err.code) : 'unknown') + ' — check URL/CORS/codec');
+  });
+
 
   // Real resolution ladder config. Two distinct public sample assets are
   // wired here to prove the swap mechanism end-to-end; replace `src` with
@@ -254,7 +273,7 @@
   function log(msg) {
     var stamp = new Date().toLocaleTimeString();
     logLines.push('[' + stamp + '] ' + msg);
-    if (logLines.length > 7) logLines.shift();
+    if (logLines.length > 12) logLines.shift();
     if (debugEl) debugEl.setAttribute('value', logLines.join('\n'));
     console.log('[VR TEST]', msg);
   }
@@ -454,27 +473,56 @@
       this.el.addEventListener('triggerup', this.onUp);
       this.el.addEventListener('mouseup', this.onUp);
       this.el.addEventListener('raycaster-intersection', this.onIntersection);
+
+      // Hover logging — shows exactly what the laser is over, every time it
+      // changes, even with no trigger press. Very useful for confirming the
+      // laser is reaching the right thing before blaming the click logic.
+      var handName = this.el.id || 'cursor';
+      this.el.addEventListener('raycaster-intersection', function (evt) {
+        var hit = evt.detail.els[0];
+        if (hit) log('HOVER (' + handName + '): now over "' + (hit.id || hit.className) + '"');
+      });
+      this.el.addEventListener('raycaster-intersection-cleared', function (evt) {
+        var lost = evt.detail.els[0];
+        if (lost) log('HOVER (' + handName + '): left "' + (lost.id || lost.className) + '"');
+      });
+      this.el.addEventListener('controllerconnected', function () {
+        log('CONTROLLER CONNECTED: ' + handName);
+      });
+      this.el.addEventListener('controllerdisconnected', function () {
+        log('CONTROLLER DISCONNECTED: ' + handName);
+      });
     },
     onDown: function () {
       var raycasterComp = this.el.components.raycaster;
-      if (!raycasterComp || !raycasterComp.intersections.length) return;
+      var handName = this.el.id || 'cursor';
+
+      if (!raycasterComp || !raycasterComp.intersections.length) {
+        log('TRIGGER DOWN (' + handName + '): no target under laser');
+        return;
+      }
+
       var targetEl = raycasterComp.intersections[0].object.el;
+      var dist = raycasterComp.intersections[0].distance.toFixed(2);
 
       if (targetEl && targetEl.classList.contains('drag-track')) {
         this.dragging = true;
         this.dragTarget = targetEl;
-        log('DRAG start: ' + targetEl.id);
+        log('TRIGGER DOWN (' + handName + '): hit "' + targetEl.id + '" @ ' + dist + 'm -> DRAG start');
         this.applyFromIntersection(raycasterComp.intersections[0]);
       } else if (targetEl && targetEl.classList.contains('grabbable-scene')) {
-        // Grabbing open video area, not a HUD control — start scene pan.
         this.grabbingScene = true;
         this.lastRayDir = raycasterComp.raycaster.ray.direction.clone().normalize();
-        log('GRAB start: scene pan');
+        log('TRIGGER DOWN (' + handName + '): hit videosphere @ ' + dist + 'm -> GRAB start');
+      } else {
+        log('TRIGGER DOWN (' + handName + '): hit "' + (targetEl ? (targetEl.id || targetEl.className) : 'unknown') + '" @ ' + dist + 'm -> unhandled (no drag-track/grabbable-scene class)');
       }
     },
     onUp: function () {
-      if (this.dragging && this.dragTarget) log('DRAG end: ' + this.dragTarget.id);
-      if (this.grabbingScene) log('GRAB end: scene pan');
+      var handName = this.el.id || 'cursor';
+      if (this.dragging && this.dragTarget) log('TRIGGER UP (' + handName + '): DRAG end "' + this.dragTarget.id + '"');
+      else if (this.grabbingScene) log('TRIGGER UP (' + handName + '): GRAB end scene pan');
+      else log('TRIGGER UP (' + handName + '): no active drag/grab');
       this.dragging = false;
       this.dragTarget = null;
       this.grabbingScene = false;
@@ -526,7 +574,7 @@
     }
   });
 
-  log('Click PLAY/MUTE, drag SEEK/VOLUME, or pick a resolution rung to test.');
+  log('rig ready. sphere radius 100, raycaster far 150 (grab range fixed). verbose logging on.');
 })();
 </script>
 
